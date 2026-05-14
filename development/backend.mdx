@@ -1,0 +1,255 @@
+---
+title: "Tikera backend: Laravel API structure and models"
+description: "The Laravel backend powering Tikera: its Eloquent models, database schema, Sanctum authentication, and the ApiResponse helper used across all controllers."
+---
+
+The backend is a Laravel application that exposes a JSON REST API under the `/api` prefix. All responses follow a consistent envelope through the `ApiResponse` helper class. Authentication uses Laravel Sanctum, issuing plain-text bearer tokens that are stored client-side and verified on every protected route. The database is SQLite, with schema managed through versioned migrations.
+
+## Authentication
+
+Tikera uses **Laravel Sanctum** token authentication. On login or registration the API creates a new personal access token, deletes any previous tokens for that user, and returns the plain-text token to the client.
+
+```php
+// AuthController — login
+$user->tokens()->delete();
+$token = $user->createToken('auth_token')->plainTextToken;
+
+return ApiResponse::success([
+    'user'  => $user,
+    'token' => $token,
+]);
+```
+
+The client stores this token in `localStorage` and sends it as a `Authorization: Bearer <token>` header. Routes that require authentication are wrapped in the `auth:sanctum` middleware group (see [Routes](#routes) below).
+
+## The `ApiResponse` helper
+
+Every controller method returns JSON through `App\Helpers\ApiResponse` rather than calling `response()->json()` directly. This guarantees a consistent envelope across the entire API:
+
+```php
+class ApiResponse
+{
+    public static function success($data = null, string $message = 'OK', int $code = 200)
+    {
+        return response()->json([
+            'status'  => 'success',
+            'message' => $message,
+            'data'    => $data,
+        ], $code);
+    }
+
+    public static function error(string $message = 'API Error', int $code = 400, $errors = null)
+    {
+        return response()->json([
+            'status'  => 'error',
+            'message' => $message,
+            'errors'  => $errors,
+        ], $code);
+    }
+}
+```
+
+<Info>
+The frontend's `api.js` reads `response.data.data` to unwrap the payload, and reads `response.data.message` when showing error toasts.
+</Info>
+
+## Routes
+
+All routes are registered in `routes/api.php` under the shared `api` middleware group:
+
+```php
+Route::group(['middleware' => ['api']], function () {
+
+    // Public auth routes
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login',    [AuthController::class, 'login']);
+
+    // Sanctum-protected auth routes
+    Route::middleware(['auth:sanctum'])->group(function () {
+        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/user',    [AuthController::class, 'user']);
+    });
+
+    // Public read routes
+    Route::get('/movies',               [MovieController::class, 'index']);
+    Route::get('/movies/week',          [MovieController::class, 'byWeek']);
+    Route::get('/movies/{movie}',       [MovieController::class, 'show']);
+    Route::get('/rooms',                [RoomController::class, 'index']);
+    Route::get('/rooms/{room}',         [RoomController::class, 'show']);
+    Route::get('/screenings',           [ScreeningController::class, 'index']);
+    Route::get('/screenings/{screening}', [ScreeningController::class, 'show']);
+
+    // Protected write routes (admin + authenticated users)
+    Route::middleware(['auth:sanctum'])->group(function () {
+        Route::post('/movies',             [MovieController::class, 'store']);
+        Route::put('/movies/{movie}',      [MovieController::class, 'update']);
+        Route::patch('/movies/{movie}',    [MovieController::class, 'update']);
+        Route::delete('/movies/{movie}',   [MovieController::class, 'destroy']);
+
+        Route::post('/rooms',              [RoomController::class, 'store']);
+        Route::put('/rooms/{room}',        [RoomController::class, 'update']);
+        Route::delete('/rooms/{room}',     [RoomController::class, 'destroy']);
+
+        Route::post('/screenings',             [ScreeningController::class, 'store']);
+        Route::put('/screenings/{screening}',  [ScreeningController::class, 'update']);
+        Route::patch('/screenings/{screening}',[ScreeningController::class, 'update']);
+        Route::delete('/screenings/{screening}',[ScreeningController::class, 'destroy']);
+
+        Route::apiResource('bookings', BookingController::class);
+    });
+});
+```
+
+<Note>
+Any request that does not match a defined route returns `{"message": "Page Not Found"}` with a 404 status through a catch-all `Route::any` at the bottom of the file.
+</Note>
+
+## Data models
+
+### Movie
+
+```php
+protected $fillable = [
+    'title',
+    'description',
+    'image_path',   // URL string, max 2048 chars
+    'duration',     // integer, minutes
+    'genre',
+    'release_year', // integer (YEAR column)
+];
+
+protected $casts = [
+    'duration'     => 'integer',
+    'release_year' => 'integer',
+];
+
+public function screenings()
+{
+    return $this->hasMany(Screening::class);
+}
+```
+
+### Screening
+
+```php
+protected $fillable = [
+    'movie_id',
+    'room_id',
+    'date',        // date string
+    'start_time',  // datetime, cast to Carbon
+    'week_number', // ISO week (1–52)
+    'week_day',    // ISO day (1 = Monday, 7 = Sunday)
+];
+
+protected $casts = [
+    'start_time' => 'datetime',
+];
+
+public function movie()   { return $this->belongsTo(Movie::class); }
+public function room()    { return $this->belongsTo(Room::class); }
+public function bookings(){ return $this->hasMany(Booking::class); }
+```
+
+### Room
+
+```php
+protected $fillable = [
+    'name',
+    'capacity',
+    'rows',
+    'columns',
+    'has_3d', // boolean
+];
+
+protected $casts = [
+    'has_3d' => 'boolean',
+];
+
+public function screenings()
+{
+    return $this->hasMany(Screening::class);
+}
+```
+
+<Note>
+The `rooms` database table uses `seats_per_row` as the column name (from the migration), while the Room model's `$fillable` array refers to it as `columns`. The API response surfaces it as `seatsPerRow` in JSON output. The seeder creates rooms using `seats_per_row` directly.
+</Note>
+
+### Booking
+
+```php
+protected $fillable = [
+    'user_id',
+    'screening_id',
+    'seats',         // JSON array: [{"row": 1, "seat": 3}, ...]
+    'ticket_types',  // JSON array: [{"type": "student", "quantity": 2}, ...]
+    'total_price',   // decimal(8,2)
+    'status',        // enum: pending | confirmed | cancelled
+];
+
+protected $casts = [
+    'total_price'  => 'decimal:2',
+    'seats'        => 'array',
+    'ticket_types' => 'array',
+];
+
+public function user()      { return $this->belongsTo(User::class); }
+public function screening() { return $this->belongsTo(Screening::class); }
+```
+
+### TicketType
+
+Seeded during migration — not managed by users through the UI.
+
+| `name` | `price_multiplier` |
+|--------|--------------------|
+| `normal` | 1.00 |
+| `student` | 0.75 |
+| `senior` | 0.80 |
+
+### Model relationships summary
+
+```
+Movie ──< Screening >── Room
+               │
+               └──< Booking >── User
+```
+
+| Relationship | Type |
+|---|---|
+| `Movie` → `Screening` | `hasMany` |
+| `Screening` → `Movie` | `belongsTo` |
+| `Screening` → `Room` | `belongsTo` |
+| `Room` → `Screening` | `hasMany` |
+| `Screening` → `Booking` | `hasMany` |
+| `Booking` → `Screening` | `belongsTo` |
+| `Booking` → `User` | `belongsTo` |
+| `User` → `Booking` | `hasMany` (via Laravel default) |
+
+## Database migrations
+
+Migrations run in the order shown. Each file maps to a single schema change:
+
+| Migration file | Table / change |
+|---|---|
+| `0001_01_01_000000_create_users_table` | `users` — standard Laravel users table |
+| `0001_01_01_000001_create_cache_table` | `cache`, `cache_locks` |
+| `0001_01_01_000002_create_jobs_table` | `jobs`, `job_batches`, `failed_jobs` |
+| `2024_03_21_000001_create_movies_table` | `movies` |
+| `2024_03_21_000002_create_rooms_table` | `rooms` (`name`, `rows`, `seats_per_row`, nullable `description`) |
+| `2024_03_21_000003_create_screenings_table` | `screenings` (FK → `movies`, `rooms`; `start_time`, `date`, `week_number`, `week_day`) |
+| `2024_03_21_000004_create_bookings_table` | `bookings` (FK → `users`, `screenings`; `total_price`, `status` enum) |
+| `2024_03_21_000005_add_seats_to_bookings_table` | Adds `seats` TEXT column (JSON array) |
+| `2024_03_21_000006_create_ticket_types_table` | `ticket_types` (`name`, `price_multiplier`); seeds three default types |
+| `2024_03_21_000007_add_ticket_types_to_bookings_table` | Adds `ticket_types` JSON column to `bookings` |
+| `2025_05_11_094302_create_personal_access_tokens_table` | Sanctum `personal_access_tokens` table |
+
+To run all migrations and seed the database:
+
+```bash
+php artisan migrate --seed
+```
+
+<Tip>
+The `seats` column was added in a separate migration from the initial `bookings` table, and `ticket_types` in another — reflecting the feature being built incrementally. Both are now part of the `Booking` model's `$fillable` and `$casts` arrays.
+</Tip>

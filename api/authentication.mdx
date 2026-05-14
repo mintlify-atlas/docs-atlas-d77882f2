@@ -1,0 +1,261 @@
+---
+title: "API authentication: register, login, and tokens"
+description: "Obtain a Tikera API bearer token via POST /api/register or POST /api/login, then include it in the Authorization header on every protected request."
+---
+
+The Tikera API uses token-based authentication. Calling `POST /api/register` or `POST /api/login` returns a bearer token. Include that token in the `Authorization` header on every subsequent request that requires authentication.
+
+<Warning>
+  Each login or registration call invalidates all previous tokens for that account and issues a new one. If you log in from a second location, any earlier token stops working immediately.
+</Warning>
+
+---
+
+## Register
+
+Create a new user account and receive an authentication token.
+
+```
+POST /api/register
+```
+
+### Request body
+
+<ParamField body="name" type="string" required>
+  The user's display name. Maximum 255 characters.
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  A valid, unique email address. Maximum 255 characters.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The account password. Minimum 8 characters.
+</ParamField>
+
+<ParamField body="password_confirmation" type="string" required>
+  Must match the `password` field exactly.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="status" type="string" required>
+  Always `"success"` on a 201 response.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Always `"OK"` on success.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  <Expandable title="properties" defaultOpen>
+    <ResponseField name="user" type="object">
+      The newly created user object, including `id`, `name`, `email`, and `role`.
+    </ResponseField>
+    <ResponseField name="token" type="string">
+      The bearer token to use in subsequent requests.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+```bash
+curl -X POST http://localhost:8000/api/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "password": "secret123",
+    "password_confirmation": "secret123"
+  }'
+```
+
+```json
+{
+  "status": "success",
+  "message": "OK",
+  "data": {
+    "user": {
+      "id": 1,
+      "name": "Ada Lovelace",
+      "email": "ada@example.com",
+      "role": "user",
+      "created_at": "2026-05-14T10:00:00.000000Z",
+      "updated_at": "2026-05-14T10:00:00.000000Z"
+    },
+    "token": "1|abc123..."
+  }
+}
+```
+
+### Errors
+
+| HTTP status | `message`                                         | When                                          |
+| ----------- | ------------------------------------------------- | --------------------------------------------- |
+| `422`       | `Registration failed due to validation errors`    | A field is missing, invalid, or email is taken |
+| `500`       | `Registration failed. Please try again later.`    | Unexpected server error                        |
+
+---
+
+## Log in
+
+Authenticate an existing user and receive a fresh token.
+
+```
+POST /api/login
+```
+
+### Request body
+
+<ParamField body="email" type="string" required>
+  The account's email address.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The account's password.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="status" type="string" required>
+  Always `"success"` on a 200 response.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Always `"OK"` on success.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  <Expandable title="properties" defaultOpen>
+    <ResponseField name="user" type="object">
+      The authenticated user object, including `id`, `name`, `email`, and `role`.
+    </ResponseField>
+    <ResponseField name="token" type="string">
+      The bearer token to use in subsequent requests.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+```bash
+curl -X POST http://localhost:8000/api/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "ada@example.com",
+    "password": "secret123"
+  }'
+```
+
+```json
+{
+  "status": "success",
+  "message": "OK",
+  "data": {
+    "user": {
+      "id": 1,
+      "name": "Ada Lovelace",
+      "email": "ada@example.com",
+      "role": "user",
+      "created_at": "2026-05-14T10:00:00.000000Z",
+      "updated_at": "2026-05-14T10:00:00.000000Z"
+    },
+    "token": "2|def456..."
+  }
+}
+```
+
+### Errors
+
+| HTTP status | `message`              | When                              |
+| ----------- | ---------------------- | --------------------------------- |
+| `401`       | `Invalid credentials`  | Email not found or wrong password |
+| `500`       | `Logon failed. Please try again later.` | Unexpected server error |
+
+---
+
+## Pass the token
+
+Include the token in the `Authorization` header on every protected request:
+
+```
+Authorization: Bearer {your_token}
+```
+
+Store the token securely. The official client stores it in `localStorage` under the key `"token"` and attaches it automatically to every outgoing request.
+
+---
+
+## Get the current user
+
+Return the user object associated with the current token.
+
+```
+GET /api/user
+```
+
+**Requires authentication.**
+
+### Response fields
+
+<ResponseField name="status" type="string" required>
+  Always `"success"` on a 200 response.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  The authenticated user object (`id`, `name`, `email`, `role`, timestamps).
+</ResponseField>
+
+### Example
+
+```bash
+curl http://localhost:8000/api/user \
+  -H "Authorization: Bearer {your_token}"
+```
+
+```json
+{
+  "status": "success",
+  "message": "OK",
+  "data": {
+    "id": 1,
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "role": "user",
+    "created_at": "2026-05-14T10:00:00.000000Z",
+    "updated_at": "2026-05-14T10:00:00.000000Z"
+  }
+}
+```
+
+---
+
+## Log out
+
+Invalidate the current session token. The token cannot be used after this call.
+
+```
+POST /api/logout
+```
+
+**Requires authentication.**
+
+### Example
+
+```bash
+curl -X POST http://localhost:8000/api/logout \
+  -H "Authorization: Bearer {your_token}"
+```
+
+```json
+{
+  "status": "success",
+  "message": "OK",
+  "data": null
+}
+```
+
+<Note>
+  Only the token used in the request is invalidated. Other tokens belonging to the same user (if any exist) are unaffected — though in practice, logging in always replaces all existing tokens with one new token.
+</Note>

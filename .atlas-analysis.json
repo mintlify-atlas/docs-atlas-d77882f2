@@ -1,0 +1,107 @@
+{
+  "projectType": "saas",
+  "projectName": "Tikera",
+  "projectDescription": "A full-stack cinema ticketing application that lets users browse movies, view screenings, and book seats online, with an admin panel for managing movies and screenings.",
+  "theme": "almond",
+  "primaryColor": "#fbc926",
+  "lightColor": "#8c73fa",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guide",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/movies",
+              "features/screenings",
+              "features/booking",
+              "features/authentication"
+            ]
+          },
+          {
+            "group": "Admin Panel",
+            "pages": [
+              "admin/overview",
+              "admin/managing-movies",
+              "admin/managing-screenings"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/architecture",
+              "development/frontend",
+              "development/backend"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/movies",
+              "api/screenings",
+              "api/rooms",
+              "api/bookings"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Browse movies with detailed info (title, genre, duration, release year, description, poster)",
+    "View screenings by week and day with seat availability",
+    "Interactive seat selection with real-time availability",
+    "Multiple ticket types with dynamic pricing",
+    "User authentication with registration, login, and session management",
+    "Booking management — view, and cancel bookings",
+    "Admin panel for creating, editing, and deleting movies and screenings",
+    "Responsive, mobile-friendly UI built with React and Tailwind CSS"
+  ],
+  "publicApiSurface": [
+    "POST /api/register",
+    "POST /api/login",
+    "POST /api/logout",
+    "GET /api/user",
+    "GET /api/movies",
+    "GET /api/movies/week?week_number={n}",
+    "GET /api/movies/{id}",
+    "POST /api/movies",
+    "PUT /api/movies/{id}",
+    "DELETE /api/movies/{id}",
+    "GET /api/rooms",
+    "GET /api/rooms/{id}",
+    "POST /api/rooms",
+    "PUT /api/rooms/{id}",
+    "DELETE /api/rooms/{id}",
+    "GET /api/screenings",
+    "GET /api/screenings/{id}",
+    "POST /api/screenings",
+    "PUT /api/screenings/{id}",
+    "DELETE /api/screenings/{id}",
+    "GET /api/bookings",
+    "GET /api/bookings/{id}",
+    "POST /api/bookings",
+    "DELETE /api/bookings/{id}"
+  ]
+}

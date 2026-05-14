@@ -1,0 +1,143 @@
+---
+title: "Bookings API — reserve seats and cancel tickets"
+description: "Endpoints for creating ticket bookings with seat selection and ticket types, listing your bookings, and cancelling upcoming reservations."
+---
+
+The Bookings API lets authenticated users reserve seats for a screening, view their booking history, and cancel upcoming reservations. All booking endpoints require a valid Bearer token. The API validates seat availability in real time and prevents double-booking.
+
+<Note>All bookings endpoints require authentication. Include `Authorization: Bearer {token}` on every request.</Note>
+
+## GET /api/bookings
+
+Returns all bookings belonging to the authenticated user, with nested movie and room details.
+
+```bash
+curl http://localhost:8000/api/bookings \
+  -H "Authorization: Bearer {token}"
+```
+
+**Response**
+
+```json
+{
+  "status": "success",
+  "message": "OK",
+  "data": [
+    {
+      "id": 1,
+      "user_id": 3,
+      "screening_id": 5,
+      "seats": [{ "row": 2, "seat": 4 }, { "row": 2, "seat": 5 }],
+      "ticket_types": [{ "type": "normal", "quantity": 2 }],
+      "total_price": "5000.00",
+      "status": "confirmed",
+      "screening": {
+        "id": 5,
+        "date": "2025-05-15",
+        "start_time": "18:00:00",
+        "movie": { "id": 1, "title": "Inception", "genre": "Sci-Fi" },
+        "room": { "id": 1, "name": "Grand Hall" }
+      }
+    }
+  ]
+}
+```
+
+---
+
+## GET /api/bookings/{id}
+
+Returns a single booking. Returns `403` if the booking belongs to a different user.
+
+```bash
+curl http://localhost:8000/api/bookings/1 \
+  -H "Authorization: Bearer {token}"
+```
+
+---
+
+## POST /api/bookings
+
+Creates a new booking. The API checks seat availability, validates seat positions against the room dimensions, and calculates the total price from the ticket types.
+
+<ParamField body="screening_id" type="integer" required>
+  ID of the screening to book. The screening must be in the future — past screenings return `422`.
+</ParamField>
+
+<ParamField body="seats" type="array" required>
+  Array of seat objects. Minimum 1 seat required.
+
+  <Expandable title="Seat object">
+    <ParamField body="row" type="integer" required>
+      Row number (1-based). Must not exceed the room's total rows.
+    </ParamField>
+    <ParamField body="number" type="integer" required>
+      Seat number within the row (1-based). Must not exceed the room's seats per row.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="ticket_types" type="array" required>
+  Array of ticket type selections.
+
+  <Expandable title="Ticket type object">
+    <ParamField body="type" type="string" required>
+      Ticket type name — must match a value in the `ticket_types` table: `"normal"`, `"student"`, or `"senior"`.
+    </ParamField>
+    <ParamField body="quantity" type="integer" required>
+      Number of tickets of this type. Minimum: 1.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Price calculation**
+
+`total_price = screening.base_price × ticket_type.price_multiplier × quantity` (summed across all ticket types)
+
+<Warning>
+If any requested seat is already taken by another confirmed booking, the API returns `422` with the message "Seat row {n}, number {n} is already taken". Always check seat availability via the screenings endpoint before booking.
+</Warning>
+
+```bash
+curl -X POST http://localhost:8000/api/bookings \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "screening_id": 5,
+    "seats": [
+      { "row": 2, "number": 4 },
+      { "row": 2, "number": 5 }
+    ],
+    "ticket_types": [
+      { "type": "normal", "quantity": 2 }
+    ]
+  }'
+```
+
+Returns `200` with the created booking object (status: `"confirmed"`) including nested screening, movie, and room data.
+
+---
+
+## DELETE /api/bookings/{id}
+
+Cancels a booking by deleting it. Returns `403` if the booking belongs to a different user. Returns `422` if the screening has already started.
+
+<Warning>You can only cancel bookings for future screenings. Once the screening start time has passed, cancellation is not permitted.</Warning>
+
+```bash
+curl -X DELETE http://localhost:8000/api/bookings/1 \
+  -H "Authorization: Bearer {token}"
+```
+
+Returns `204 No Content` on success.
+
+---
+
+## Error reference
+
+| Status | Meaning |
+|--------|---------|
+| `401` | Missing or invalid Bearer token |
+| `403` | Booking belongs to a different user |
+| `422` | Validation error — seat taken, past screening, invalid seat position, or invalid ticket type |
+| `500` | Unexpected server error |

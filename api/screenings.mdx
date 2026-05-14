@@ -1,0 +1,121 @@
+---
+title: "Screenings API — list and manage showtimes"
+description: "Endpoints for listing and retrieving film screenings, and for admins to create, update, or delete showtimes with room and time conflict checks."
+---
+
+The Screenings API exposes all cinema showtimes. Public endpoints let you list and retrieve screenings; authenticated admin endpoints let you create, update, and delete them. The backend automatically derives `week_number` and `week_day` from the provided date.
+
+## GET /api/screenings
+
+Returns all screenings with nested movie, room, and booking data.
+
+<Note>Public — no authentication required.</Note>
+
+```bash
+curl http://localhost:8000/api/screenings
+```
+
+**Response**
+
+```json
+{
+  "status": "success",
+  "message": "OK",
+  "data": [
+    {
+      "id": 5,
+      "movie_id": 1,
+      "room_id": 1,
+      "date": "2025-05-15",
+      "start_time": "18:00:00",
+      "week_number": 20,
+      "week_day": 4,
+      "movie": { "id": 1, "title": "Inception", "genre": "Sci-Fi" },
+      "room": { "id": 1, "name": "Grand Hall", "rows": 10, "seats_per_row": 10 }
+    }
+  ]
+}
+```
+
+---
+
+## GET /api/screenings/{id}
+
+Returns a single screening with its movie, room, and bookings.
+
+<Note>Public — no authentication required.</Note>
+
+```bash
+curl http://localhost:8000/api/screenings/5
+```
+
+---
+
+## POST /api/screenings
+
+Creates a new screening. **Requires authentication (admin).**
+
+<ParamField body="movie_id" type="integer" required>
+  ID of an existing movie.
+</ParamField>
+
+<ParamField body="room_id" type="integer">
+  ID of an existing room. Defaults to room ID `1` (Grand Hall) if omitted.
+</ParamField>
+
+<ParamField body="date" type="string" required>
+  Screening date in `YYYY-MM-DD` format. `week_number` and `week_day` are computed automatically from this value.
+</ParamField>
+
+<ParamField body="start_time" type="string" required>
+  Start time in `HH:MM` format (24-hour). Must be unique per room — you cannot schedule two screenings in the same room at the same time.
+</ParamField>
+
+<Warning>If another screening is already scheduled in the same room at the same `start_time`, the API returns `422 Unprocessable Entity` with the message "There is already a screening scheduled in this room at this time".</Warning>
+
+```bash
+curl -X POST http://localhost:8000/api/screenings \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "movie_id": 1,
+    "room_id": 1,
+    "date": "2025-05-15",
+    "start_time": "18:00"
+  }'
+```
+
+Returns `201` with the created screening object including nested movie and room.
+
+---
+
+## PUT /api/screenings/{id}
+
+Updates an existing screening. **Requires authentication (admin).** All fields are optional.
+
+<ParamField body="movie_id" type="integer">ID of an existing movie.</ParamField>
+<ParamField body="room_id" type="integer">ID of an existing room.</ParamField>
+<ParamField body="date" type="string">Date in `YYYY-MM-DD` format. Recalculates `week_number` and `week_day`.</ParamField>
+<ParamField body="start_time" type="string">Time in `HH:MM` format. Validated against room conflicts.</ParamField>
+
+```bash
+curl -X PUT http://localhost:8000/api/screenings/5 \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{ "start_time": "20:30" }'
+```
+
+Returns `200` with the updated screening object.
+
+---
+
+## DELETE /api/screenings/{id}
+
+Deletes a screening. **Requires authentication (admin).**
+
+```bash
+curl -X DELETE http://localhost:8000/api/screenings/5 \
+  -H "Authorization: Bearer {token}"
+```
+
+Returns `204 No Content` on success.

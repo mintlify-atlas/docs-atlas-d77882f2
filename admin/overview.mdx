@@ -1,0 +1,38 @@
+---
+title: "Tikera admin panel: manage movies and screenings"
+description: "Cinema staff use Tikera's admin panel to manage the movie catalog and screening schedule. Access it at /adminpage when signed in as an admin."
+---
+
+The Tikera admin panel gives cinema staff full control over the movie catalog and screening schedule. From a single interface, admins can add new films, update existing entries, remove outdated content, and manage all associated screenings — without touching the database directly.
+
+## Accessing the admin panel
+
+Navigate to `/adminpage` while authenticated as an admin user. The route is protected: non-admin users are automatically redirected to the home page and shown a permission error.
+
+<Note>
+  To try the admin panel in a local or demo environment, use the following credentials:
+
+  - **Email:** admin@example.com
+  - **Password:** admin
+</Note>
+
+## What admins can do
+
+The admin panel is split into two main areas of responsibility:
+
+**Movie management** — Add new movies to the catalog, edit details such as title, genre, duration, and poster image, or permanently delete a movie. Deleting a movie also removes all of its associated screenings.
+
+**Screening management** — For each movie, schedule one or more screenings by selecting a room, date, and start time. Existing screenings can be edited or deleted individually.
+
+<CardGroup cols={2}>
+  <Card title="Managing movies" icon="film" href="/admin/managing-movies">
+    Add, edit, and delete movies in the catalog, including poster images, genres, and runtime.
+  </Card>
+  <Card title="Managing screenings" icon="calendar" href="/admin/managing-screenings">
+    Schedule screenings for specific movies, rooms, dates, and times. Edit or remove them as needed.
+  </Card>
+</CardGroup>
+
+## Admin-only access
+
+The `/adminpage` route checks the authenticated user's role before rendering any content. If the current user is not an admin, they are redirected to the home page. Regular customers browsing the site never see the admin interface or its controls.

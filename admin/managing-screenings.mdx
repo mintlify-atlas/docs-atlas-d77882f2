@@ -1,0 +1,66 @@
+---
+title: "Schedule and manage film screenings in Tikera"
+description: "Schedule screenings for specific movies, rooms, and dates in Tikera. Edit or remove individual showings from the Movie Screenings modal in the admin panel."
+---
+
+Screenings in Tikera represent a single scheduled showing of a movie in a specific room at a specific date and time. Each screening belongs to one movie and one room, and the system automatically derives its week number and day of the week from the date you provide.
+
+## How screenings are linked to movies and rooms
+
+Every screening stores a `movie_id` and a `room_id`. The room determines the seating layout (rows × seats per row) that customers see when booking. When you delete a movie, all of its screenings are deleted with it. Screenings can also be managed and deleted individually without affecting the movie itself.
+
+## Viewing screenings for a movie
+
+From the admin panel at `/adminpage`, click anywhere on a movie card (the card body or the "Manage" badge). The **Movie Screenings** modal opens, showing:
+
+- The movie's poster, title, genre, release year, and runtime at the top
+- A scrollable table listing all scheduled screenings with their date and start time
+- **Edit** and **Delete** buttons on each screening row
+
+If no screenings have been scheduled yet, the modal shows a prompt to schedule one immediately.
+
+## How to add a screening
+
+<Steps>
+  <Step title="Open the movie screenings modal">
+    Click a movie card in the admin grid. The screenings modal opens for that film.
+  </Step>
+  <Step title="Click Add Screening">
+    Click the **Add Screening** button in the top-right of the modal. The add screening form appears inline.
+  </Step>
+  <Step title="Fill in the screening details">
+    Select a room from the dropdown (each option shows the room name and its seating dimensions), pick a date, and enter a start time. See the [field reference](#screening-fields) below.
+  </Step>
+  <Step title="Submit the form">
+    Click **Add Screening**. The new screening is sent to the API. On success, it appears in the screenings table immediately.
+  </Step>
+</Steps>
+
+<Info>
+  The `week_number` and `week_day` fields are computed automatically by the server from the date you enter — you do not need to provide them manually.
+</Info>
+
+## Screening fields
+
+| Field | Type | Description |
+|---|---|---|
+| `movie_id` | integer | Set automatically from the movie whose screenings modal is open |
+| `room_id` | integer | The room where the screening will take place; selected from a dropdown of available rooms |
+| `date` | date | The calendar date of the screening (YYYY-MM-DD) |
+| `start_time` | time (HH:MM) | The time the screening begins, in 24-hour format |
+| `week_number` | integer | ISO week of the year — derived automatically from `date` |
+| `week_day` | integer | ISO weekday (1 = Monday, 7 = Sunday) — derived automatically from `date` |
+
+<Warning>
+  The system prevents scheduling two screenings in the same room at the same start time. If a conflict exists, the API returns an error and the screening is not created.
+</Warning>
+
+## Editing a screening
+
+Click the **Edit** button on any row in the screenings table. The edit screening modal opens with the current date and start time pre-filled. You can change the date and/or the start time, then click **Update Screening** to save.
+
+The room is not editable after a screening is created. To change the room, delete the screening and create a new one.
+
+## Deleting a screening
+
+Click the **Delete** button on any screening row. A confirmation dialog appears. Click **Delete** to confirm or **Cancel** to abort. Deleted screenings are removed from the table immediately without a page reload.

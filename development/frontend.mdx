@@ -1,0 +1,356 @@
+---
+title: "Tikera frontend: components, Redux, and services"
+description: "How the React frontend is structured: component directories, the four Redux slices that manage global state, and the axios-based service layer."
+---
+
+The frontend is a React 19 SPA built with Vite. State is managed centrally through Redux Toolkit, and all API communication flows through a single axios instance that automatically attaches the Sanctum bearer token stored in `localStorage`. Components are organised by feature rather than type, with clear separation between UI primitives, page-level views, and the booking workflow.
+
+## Component structure
+
+Components live under `src/components/` and are grouped into six directories:
+
+| Directory | Purpose |
+|-----------|---------|
+| `pages/` | Top-level route components: `MoviesPage`, `LoginPage`, `RegisterPage`, `BookingsPage`, `AdminPage` |
+| `admin/` | Admin panel forms for managing movies, rooms, and screenings |
+| `booking/` | Booking history display and cancellation |
+| `bookingProcess/` | Step-by-step seat selection, ticket picker, and checkout |
+| `layout/` | `Navbar` and `Footer` rendered on every route |
+| `ui/` | Shared presentational primitives (buttons, modals, etc.) |
+
+## Redux store
+
+The store is configured in `src/store/store.js` using `configureStore`:
+
+```javascript
+import { configureStore } from "@reduxjs/toolkit";
+import userReducer from "./slices/userSlice";
+import themeReducer from "./slices/themeSlice";
+import bookingReducer from "./slices/bookingSlice";
+import movieReducer from "./slices/movieSlice";
+
+const store = configureStore({
+  reducer: {
+    user: userReducer,
+    theme: themeReducer,
+    booking: bookingReducer,
+    movies: movieReducer,
+  },
+});
+
+export default store;
+```
+
+### Slices
+
+<Tabs>
+  <Tab title="movieSlice">
+    Manages the browsing state for the movies listing page.
+
+    **State shape:**
+    - `selectedWeek` — ISO week number currently in view (defaults to the current week via `date-fns`)
+    - `selectedDay` — ISO day of the week (1 = Monday, 7 = Sunday)
+    - `selectedMovie` — the full movie object the user has clicked on
+    - `selectedScreening` — the screening the user is booking
+    - `moviesByWeek` / `moviesByDay` — raw and filtered movie arrays
+    - `loading` / `error` — async fetch status
+
+    **Async thunks:**
+    ```javascript
+    // Fetches movies filtered by ISO week number
+    export const fetchMoviesByWeek = createAsyncThunk(
+      "movies/fetchByWeek",
+      async (weekNumber, { rejectWithValue }) => {
+        try {
+          return await MovieService.getMoviesByWeek(weekNumber);
+        } catch (error) {
+          return rejectWithValue(error.message || "Failed to fetch movies");
+        }
+      }
+    );
+
+    // Convenience thunk: fetch movies for the current week on mount
+    export const initializeMovies = () => async (dispatch, getState) => {
+      const currentWeek = getState().movies.selectedWeek || getISOWeek(new Date());
+      await dispatch(fetchMoviesByWeek(currentWeek));
+    };
+    ```
+  </Tab>
+  <Tab title="bookingSlice">
+    Tracks the active booking being constructed by the user: selected seats and ticket quantities.
+
+    **State shape:**
+    - `selectedSeats` — array of `{ row, column }` objects
+    - `tickets` — array of `{ type, quantity }` objects (e.g. `{ type: "student", quantity: 2 }`)
+
+    **Async thunks:**
+    ```javascript
+    // Guards against adding tickets beyond the screening capacity
+    export const addTicketIfPossible = createAsyncThunk(
+      "booking/addTicketIfPossible",
+      async (payload, { getState, dispatch, rejectWithValue }) => {
+        const state = getState();
+        const success = canAddTicket(
+          state.booking.tickets,
+          state.movies.selectedScreening
+        );
+        if (success) {
+          dispatch(addTicket(payload));
+          return { status: "success" };
+        }
+        return rejectWithValue({ status: "error", message: "Screening limit reached." });
+      }
+    );
+
+    // Submits the booking to the API and resets local state on success
+    export const createBooking = createAsyncThunk(
+      "booking/createBooking",
+      async (_, { getState, dispatch, rejectWithValue }) => {
+        const state = getState();
+        const bookingData = {
+          screening_id: state.movies.selectedScreening?.id,
+          seats: state.booking.selectedSeats.map((seat) => ({
+            row: seat.row,
+            number: seat.column,
+          })),
+          ticket_types: state.booking.tickets,
+        };
+        try {
+          const data = await BookingService.createBooking(bookingData);
+          dispatch(resetBooking());
+          return { status: "success", data };
+        } catch (error) {
+          return rejectWithValue({ status: "error", message: error.response?.data?.message || "Booking failed." });
+        }
+      }
+    );
+    ```
+
+    **Key selectors:**
+    - `selectSeats` — current seat selection
+    - `selectTotalPrice` — computed from ticket quantities and type prices
+    - `selectIsBookingValid` — `true` when seat count equals ticket count and both are non-zero
+  </Tab>
+  <Tab title="userSlice">
+    Holds authentication state. Initialises from `localStorage` so the session survives a page reload.
+
+    **State shape:**
+    - `userData` — the user object returned by the API (includes `role`)
+    - `token` — Sanctum plain-text token
+    - `isLoggedIn` — boolean derived from token presence
+
+    **Reducers:**
+    ```javascript
+    setCredentials: (state, action) => {
+      const { user, token } = action.payload;
+      state.userData = user;
+      state.token = token;
+      state.isLoggedIn = true;
+      localStorage.setItem("userData", JSON.stringify(user));
+      localStorage.setItem("token", token);
+    },
+    logout: (state) => {
+      state.userData = null;
+      state.token = null;
+      state.isLoggedIn = false;
+      AuthService.logout(); // clears localStorage
+    },
+    ```
+
+    **Key selectors:**
+    - `selectIsAdmin` — `state.user.userData?.role === "admin"`
+    - `selectIsLoggedIn` — used to gate protected routes
+    - `selectToken` / `selectUserData`
+  </Tab>
+  <Tab title="themeSlice">
+    Persists the active DaisyUI theme across sessions.
+
+    **State shape:**
+    - `theme` — string (`"light"` or `"dark"`), read from `localStorage` on initialisation
+
+    ```javascript
+    const initialState = {
+      theme: localStorage.getItem("theme") || "light",
+    };
+
+    // Reducer
+    setTheme: (state, action) => {
+      state.theme = action.payload;
+    },
+    ```
+
+    The Navbar reads `selectTheme` and applies the value as a `data-theme` attribute on the root element.
+  </Tab>
+</Tabs>
+
+## Service layer
+
+All API calls go through service objects exported from `src/services/index.js`. Each service wraps the shared `api` axios instance.
+
+### The `api` instance
+
+```javascript
+// src/services/api.js
+import axios from "axios";
+import { toast } from "react-hot-toast";
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  headers: { "Content-Type": "application/json" },
+});
+
+// Attach token from localStorage before every request
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Translate HTTP errors to toast notifications
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const message = error.response?.data?.message || "An error occurred";
+    switch (error.response?.status) {
+      case 400: toast.error("Bad request. Please check your input."); break;
+      case 404: toast.error("Resource not found."); break;
+      case 500: toast.error("Internal server error. Please try again later."); break;
+      default:  toast.error(message);
+    }
+    return Promise.reject(error);
+  }
+);
+```
+
+<Note>
+The response interceptor displays a toast for every non-2xx response, so individual service functions do not need their own error UI logic.
+</Note>
+
+### `MovieService`
+
+```javascript
+const MovieService = {
+  getAllMovies: async () => {
+    const response = await api.get("/movies");
+    return response.data.data;
+  },
+
+  getMoviesByWeek: async (weekNumber) => {
+    const response = await api.get(`/movies?week_number=${weekNumber}`);
+    return response.data.data;
+  },
+
+  getMovie: async (id) => {
+    const response = await api.get(`/movies/${id}`);
+    return response.data.data;
+  },
+
+  createMovie: async (movieData) => {
+    const response = await api.post("/movies", movieData);
+    return response.data.data;
+  },
+
+  updateMovie: async (id, movieData) => {
+    const response = await api.put(`/movies/${id}`, movieData);
+    return response.data.data;
+  },
+
+  deleteMovie: async (id) => {
+    await api.delete(`/movies/${id}`);
+    return true;
+  },
+};
+```
+
+### `BookingService`
+
+```javascript
+const BookingService = {
+  // Fetches all bookings then paginates client-side
+  getUserBookings: async (page = 1, perPage = 10) => {
+    const response = await api.get("/bookings");
+    const allBookings = response.data.data;
+    const total = allBookings.length;
+    const lastPage = Math.max(1, Math.ceil(total / perPage));
+    const startIndex = (page - 1) * perPage;
+    return {
+      data: allBookings.slice(startIndex, startIndex + perPage),
+      meta: { current_page: page, last_page: lastPage, per_page: perPage, total },
+    };
+  },
+
+  getBooking: async (id) => {
+    const response = await api.get(`/bookings/${id}`);
+    return response.data.data;
+  },
+
+  createBooking: async (bookingData) => {
+    const response = await api.post("/bookings", bookingData);
+    return response.data.data;
+  },
+
+  cancelBooking: async (id) => {
+    await api.delete(`/bookings/${id}`);
+    return true;
+  },
+};
+```
+
+### `AuthService`
+
+```javascript
+const AuthService = {
+  login: async (credentials) => {
+    const response = await api.post("/login", credentials);
+    if (response.data.status === "success") {
+      const { token, user } = response.data.data;
+      localStorage.setItem("token", token);
+      localStorage.setItem("userData", JSON.stringify(user));
+    }
+    return response.data.data;
+  },
+
+  register: async (userData) => {
+    const response = await api.post("/register", userData);
+    return response.data.data;
+  },
+
+  logout: () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userData");
+  },
+
+  isAuthenticated: () => !!localStorage.getItem("token"),
+
+  getCurrentUser: () => {
+    const userData = localStorage.getItem("userData");
+    return userData ? JSON.parse(userData) : null;
+  },
+
+  isAdmin: () => {
+    const userData = localStorage.getItem("userData");
+    if (!userData) return false;
+    return JSON.parse(userData).role === "admin";
+  },
+};
+```
+
+## Key dependencies
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `react` | ^19.1.0 | UI library |
+| `react-router-dom` | ^7.6.0 | Client-side routing |
+| `@reduxjs/toolkit` | ^2.8.1 | State management |
+| `react-redux` | ^9.2.0 | React bindings for Redux |
+| `axios` | ^1.9.0 | HTTP client |
+| `date-fns` | ^4.1.0 | ISO week/day calculations |
+| `react-hot-toast` | ^2.5.2 | Toast notifications |
+| `tailwindcss` | ^4.1.6 | Utility-first CSS (via Vite plugin) |
+| `daisyui` | ^5.0.35 | Tailwind component library (dev) |
+
+<Tip>
+Tailwind is applied through the `@tailwindcss/vite` plugin rather than a PostCSS config, so there is no `tailwind.config.js` — all customisation lives in CSS files using `@theme` layers.
+</Tip>

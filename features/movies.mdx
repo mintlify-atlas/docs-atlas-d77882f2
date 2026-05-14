@@ -1,0 +1,52 @@
+---
+title: "Browsing the Tikera movie catalog by week"
+description: "Explore the weekly movie schedule in Tikera, filter by week number, and view details for every film currently showing at the cinema."
+---
+
+The Movies page is your starting point for planning a cinema visit. It displays every film scheduled for the selected week as a grid of movie cards, and pairs them with a booking panel on the right so you can move straight from browsing to reserving seats without leaving the page.
+
+## Movie card grid
+
+Each card in the grid represents one film and surfaces the key details you need to decide what to watch.
+
+<CardGroup cols={2}>
+  <Card title="Title & genre">
+    The film's title is displayed prominently at the top of each card, with its genre shown beneath — for example Sci-Fi, Drama, Action, Animation, or Comedy.
+  </Card>
+  <Card title="Duration & release year">
+    Running time is listed in minutes alongside the release year so you can quickly gauge how long the screening will last.
+  </Card>
+  <Card title="Description">
+    A short synopsis gives you enough context to decide whether the film is for you without having to leave the catalog.
+  </Card>
+  <Card title="Poster image">
+    Each movie card includes an official poster fetched from the cinema's image store, giving the catalog a visual, browsable feel.
+  </Card>
+</CardGroup>
+
+Clicking a card selects that movie and opens the full booking flow in the panel on the right side of the screen.
+
+## Weekly schedule view
+
+Movies in Tikera are programmed on a week-by-week basis. The catalog always shows the films scheduled for the currently selected week, so what you see reflects real screening availability rather than an all-time catalogue.
+
+A **Week Selector** control at the top of the page lets you move forward or backward through weeks. Changing the week immediately reloads the movie grid to show only the films that have screenings during that period.
+
+A **Day Selector** sits alongside the Week Selector and lets you narrow the view further to a specific day of the week — Monday through Sunday. This is useful when you already know which day you want to visit and want to see only what is playing then.
+
+<Tip>
+  If the movie card grid appears empty, try selecting an adjacent week — not every film runs every week, and some titles are exclusive to specific weekly slots.
+</Tip>
+
+## Data fields
+
+Every movie in Tikera is described by the following fields:
+
+| Field | Description |
+|---|---|
+| `title` | The film's display name |
+| `description` | A short synopsis shown on the card |
+| `image_path` | URL of the poster image |
+| `duration` | Running time in minutes |
+| `genre` | Genre label (e.g. Drama, Action, Animation) |
+| `release_year` | The year the film was released |

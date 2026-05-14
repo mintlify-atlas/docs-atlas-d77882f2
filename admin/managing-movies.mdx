@@ -1,0 +1,56 @@
+---
+title: "Add, edit, and delete movies in the admin panel"
+description: "Add new films, edit metadata like title, genre, and poster image, or delete movies from Tikera's catalog using the admin panel movie grid."
+---
+
+The movie management section of the admin panel is the central place for maintaining the film catalog. All movies in Tikera are displayed in a responsive grid, and each card provides quick access to edit, delete, or manage screenings for that film.
+
+## The movie grid
+
+When you open the admin panel at `/adminpage`, all movies load in a card grid. Each card shows the movie's poster image, title, genre, and release year. Hovering over a card reveals a "Manage Screenings" overlay — clicking the card body opens the screenings modal for that movie.
+
+Each card also has two explicit action buttons:
+
+- **Edit** — opens the edit modal with the movie's current data pre-filled
+- **Delete** — triggers a confirmation dialog before permanently removing the movie
+
+## How to add a movie
+
+<Steps>
+  <Step title="Open the add movie modal">
+    Click the **Add Movie** button in the top-right corner of the admin panel. A modal dialog opens with an empty form.
+  </Step>
+  <Step title="Fill in the movie details">
+    Complete all required fields in the form. See the [field reference](#movie-fields) below for accepted values and constraints.
+  </Step>
+  <Step title="Submit the form">
+    Click **Add Movie**. The new movie is sent to the API and, on success, appended to the grid immediately without a full page reload.
+  </Step>
+</Steps>
+
+## Movie fields
+
+All fields are required when creating a movie. The same fields are available when editing.
+
+| Field | Type | Description |
+|---|---|---|
+| `title` | string (max 255) | The movie's display title |
+| `description` | string | A text synopsis shown on movie cards and detail views |
+| `image_path` | URL | A publicly accessible URL pointing to the movie's poster image |
+| `duration` | integer (min 1) | Runtime in minutes |
+| `genre` | string (max 255) | The movie's genre (e.g. Action, Drama, Comedy) |
+| `release_year` | integer (1900–next year) | The four-digit year the movie was released |
+
+## Editing a movie
+
+Click the **Edit** button on any movie card. The edit modal opens with all fields pre-filled from the selected movie's current data. Make your changes and click **Update Movie** to save. The grid updates immediately to reflect the new values.
+
+## Deleting a movie
+
+Click the **Delete** button on a movie card. A confirmation dialog appears with the movie's title and a warning that the action is irreversible.
+
+<Warning>
+  Deleting a movie permanently removes it and **all of its associated screenings**. This action cannot be undone. Any existing bookings tied to those screenings will also be affected.
+</Warning>
+
+Confirm by clicking **Delete** in the dialog, or click **Cancel** to abort. If deletion succeeds, the movie is removed from the grid without a page reload.

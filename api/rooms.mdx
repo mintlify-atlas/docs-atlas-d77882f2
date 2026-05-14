@@ -1,0 +1,125 @@
+---
+title: "Rooms API — seating layout and room management"
+description: "Endpoints for listing and retrieving cinema rooms with their seating layout, and for admins to create, update, or delete room records."
+---
+
+The Rooms API exposes cinema room data — including seating dimensions used to render the seat map during booking. Public endpoints allow any client to list or retrieve rooms; admin-only endpoints manage room records. Two rooms are seeded by default: **Grand Hall** (10 rows × 10 seats) and **Small Theater** (7 rows × 8 seats).
+
+## GET /api/rooms
+
+Returns all rooms with their associated screenings.
+
+<Note>Public — no authentication required.</Note>
+
+```bash
+curl http://localhost:8000/api/rooms
+```
+
+**Response**
+
+```json
+{
+  "status": "success",
+  "message": "OK",
+  "data": [
+    {
+      "id": 1,
+      "name": "Grand Hall",
+      "rows": 10,
+      "seats_per_row": 10,
+      "description": null,
+      "screenings": [ "..." ]
+    },
+    {
+      "id": 2,
+      "name": "Small Theater",
+      "rows": 7,
+      "seats_per_row": 8,
+      "description": null,
+      "screenings": [ "..." ]
+    }
+  ]
+}
+```
+
+---
+
+## GET /api/rooms/{id}
+
+Returns a single room with its screenings.
+
+<Note>Public — no authentication required.</Note>
+
+```bash
+curl http://localhost:8000/api/rooms/1
+```
+
+---
+
+## POST /api/rooms
+
+Creates a new room. **Requires authentication (admin).**
+
+<ParamField body="name" type="string" required>
+  Room name. Maximum 255 characters.
+</ParamField>
+
+<ParamField body="rows" type="integer" required>
+  Number of seat rows in the room. Minimum: 1.
+</ParamField>
+
+<ParamField body="seats_per_row" type="integer" required>
+  Number of seats in each row. Minimum: 1.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Optional description of the room (nullable).
+</ParamField>
+
+```bash
+curl -X POST http://localhost:8000/api/rooms \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Premium Hall",
+    "rows": 8,
+    "seats_per_row": 12
+  }'
+```
+
+Returns `201` with the created room object.
+
+---
+
+## PUT /api/rooms/{id}
+
+Updates an existing room. **Requires authentication (admin).** All fields are optional.
+
+<ParamField body="name" type="string">Room name (max 255 chars).</ParamField>
+<ParamField body="rows" type="integer">Number of seat rows (min: 1).</ParamField>
+<ParamField body="seats_per_row" type="integer">Seats per row (min: 1).</ParamField>
+<ParamField body="description" type="string">Room description (nullable).</ParamField>
+
+```bash
+curl -X PUT http://localhost:8000/api/rooms/1 \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Grand Hall (Renovated)" }'
+```
+
+Returns `200` with the updated room object.
+
+---
+
+## DELETE /api/rooms/{id}
+
+Deletes a room. **Requires authentication (admin).**
+
+<Warning>Deleting a room will affect any screenings assigned to it. Remove or reassign screenings before deleting a room.</Warning>
+
+```bash
+curl -X DELETE http://localhost:8000/api/rooms/1 \
+  -H "Authorization: Bearer {token}"
+```
+
+Returns `204 No Content` on success.

@@ -1,0 +1,173 @@
+---
+title: "Movies API — list, retrieve, and manage films"
+description: "Endpoints for listing movies, filtering by week, retrieving individual films, and creating, updating, or deleting movies (admin only)."
+---
+
+The Movies API lets you retrieve the full cinema catalog and, for authenticated admins, manage movie records. All movie responses include nested screening data with seat availability.
+
+## GET /api/movies
+
+Returns all movies. Optionally filter by week using the `week_number` query parameter.
+
+<Note>This endpoint is public — no authentication required.</Note>
+
+**Query parameters**
+
+<ParamField query="week_number" type="integer">
+  ISO week number (1–53). When provided, only movies with screenings in that week are returned, and the `screenings` array is filtered to that week.
+</ParamField>
+
+**Example**
+
+```bash
+curl http://localhost:8000/api/movies
+curl http://localhost:8000/api/movies?week_number=20
+```
+
+**Response**
+
+```json
+{
+  "status": "success",
+  "message": "OK",
+  "data": [
+    {
+      "id": 1,
+      "title": "Inception",
+      "description": "A thief who steals corporate secrets...",
+      "image_path": "https://example.com/poster.jpg",
+      "duration": 148,
+      "genre": "Sci-Fi",
+      "release_year": 2010,
+      "screenings": [
+        {
+          "id": 5,
+          "room": { "rows": 10, "seatsPerRow": 10 },
+          "start_time": "18:00",
+          "date": "2025-05-15",
+          "week_number": 20,
+          "week_day": 4,
+          "bookings": [{ "row": 2, "seat": 4 }]
+        }
+      ]
+    }
+  ]
+}
+```
+
+The `bookings` array in each screening lists seats that are already taken (status not `cancelled`).
+
+---
+
+## GET /api/movies/week
+
+Returns movies for a specific week. The `week_number` query parameter is required.
+
+<Note>This endpoint is public — no authentication required.</Note>
+
+<ParamField query="week_number" type="integer" required>
+  ISO week number (1–53).
+</ParamField>
+
+```bash
+curl "http://localhost:8000/api/movies/week?week_number=20"
+```
+
+Returns the same shape as `GET /api/movies?week_number={n}`.
+
+---
+
+## GET /api/movies/{id}
+
+Returns a single movie with all its screenings.
+
+<Note>Public — no authentication required.</Note>
+
+```bash
+curl http://localhost:8000/api/movies/1
+```
+
+Response shape is the same single-movie object shown above.
+
+---
+
+## POST /api/movies
+
+Creates a new movie. **Requires authentication (admin).**
+
+<ParamField body="title" type="string" required>
+  Movie title. Maximum 255 characters.
+</ParamField>
+
+<ParamField body="description" type="string" required>
+  Full movie description or synopsis.
+</ParamField>
+
+<ParamField body="image_path" type="string" required>
+  Publicly accessible URL for the movie poster image.
+</ParamField>
+
+<ParamField body="duration" type="integer" required>
+  Runtime in minutes. Minimum: 1.
+</ParamField>
+
+<ParamField body="genre" type="string" required>
+  Genre label (e.g. `"Action"`, `"Drama"`). Maximum 255 characters.
+</ParamField>
+
+<ParamField body="release_year" type="integer" required>
+  Four-digit release year between 1900 and next calendar year.
+</ParamField>
+
+```bash
+curl -X POST http://localhost:8000/api/movies \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Inception",
+    "description": "A thief who steals corporate secrets through dreams.",
+    "image_path": "https://example.com/inception.jpg",
+    "duration": 148,
+    "genre": "Sci-Fi",
+    "release_year": 2010
+  }'
+```
+
+Returns `201` with the created movie object.
+
+---
+
+## PUT /api/movies/{id}
+
+Updates an existing movie. **Requires authentication (admin).** All fields are optional — only send the fields you want to change.
+
+<ParamField body="title" type="string">Max 255 characters.</ParamField>
+<ParamField body="description" type="string">Updated synopsis.</ParamField>
+<ParamField body="image_path" type="string">Valid URL to poster image.</ParamField>
+<ParamField body="duration" type="integer">Runtime in minutes (min: 1).</ParamField>
+<ParamField body="genre" type="string">Genre label (max 255 chars).</ParamField>
+<ParamField body="release_year" type="integer">Year between 1900 and next year.</ParamField>
+
+```bash
+curl -X PUT http://localhost:8000/api/movies/1 \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{ "duration": 155 }'
+```
+
+Returns `200` with the updated movie object.
+
+---
+
+## DELETE /api/movies/{id}
+
+Deletes a movie and its associated screenings. **Requires authentication (admin).**
+
+<Warning>Deleting a movie also removes all its screenings. This action cannot be undone.</Warning>
+
+```bash
+curl -X DELETE http://localhost:8000/api/movies/1 \
+  -H "Authorization: Bearer {token}"
+```
+
+Returns `204 No Content` on success.

@@ -1,0 +1,97 @@
+---
+title: "Tikera REST API: endpoints and response format"
+description: "The Tikera REST API is a JSON API with a consistent response envelope. Reference for the base URL, authentication, and all 25 available endpoints."
+---
+
+The Tikera API is a JSON REST API that powers the cinema ticketing platform. Every request and response uses `Content-Type: application/json`. You can use it to manage movies, rooms, screenings, and bookings, or to build your own client on top of the backend.
+
+## Base URL
+
+All endpoints are served under the `/api` prefix:
+
+```
+http://localhost:8000/api
+```
+
+When deploying to production, replace `http://localhost:8000` with your server's domain. The path prefix `/api` stays the same.
+
+## Response envelope
+
+Every response — success or error — is wrapped in a consistent JSON envelope.
+
+**Success**
+
+```json
+{
+  "status": "success",
+  "message": "OK",
+  "data": { ... }
+}
+```
+
+**Error**
+
+```json
+{
+  "status": "error",
+  "message": "A human-readable error description.",
+  "errors": { ... }
+}
+```
+
+The `errors` field is present on validation failures (HTTP 422) and contains field-level detail. It is `null` on other error types.
+
+## Authentication
+
+<Note>
+  Protected routes require an `Authorization: Bearer {token}` header. Obtain a token by calling `POST /api/register` or `POST /api/login`.
+</Note>
+
+## Endpoints
+
+| Method   | Path                      | Auth required | Description                              |
+| -------- | ------------------------- | :-----------: | ---------------------------------------- |
+| `POST`   | `/api/register`           |               | Register a new user and receive a token  |
+| `POST`   | `/api/login`              |               | Log in and receive a token               |
+| `POST`   | `/api/logout`             | ✓             | Invalidate the current session token     |
+| `GET`    | `/api/user`               | ✓             | Return the authenticated user object     |
+| `GET`    | `/api/movies`             |               | List all movies                          |
+| `GET`    | `/api/movies/week`        |               | List movies showing this week            |
+| `GET`    | `/api/movies/{movie}`     |               | Get a single movie                       |
+| `POST`   | `/api/movies`             | ✓             | Create a movie (admin)                   |
+| `PUT`    | `/api/movies/{movie}`     | ✓             | Replace a movie (admin)                  |
+| `PATCH`  | `/api/movies/{movie}`     | ✓             | Partially update a movie (admin)         |
+| `DELETE` | `/api/movies/{movie}`     | ✓             | Delete a movie (admin)                   |
+| `GET`    | `/api/rooms`              |               | List all rooms                           |
+| `GET`    | `/api/rooms/{room}`       |               | Get a single room                        |
+| `POST`   | `/api/rooms`              | ✓             | Create a room (admin)                    |
+| `PUT`    | `/api/rooms/{room}`       | ✓             | Replace a room (admin)                   |
+| `DELETE` | `/api/rooms/{room}`       | ✓             | Delete a room (admin)                    |
+| `GET`    | `/api/screenings`         |               | List all screenings                      |
+| `GET`    | `/api/screenings/{id}`    |               | Get a single screening                   |
+| `POST`   | `/api/screenings`         | ✓             | Create a screening (admin)               |
+| `PUT`    | `/api/screenings/{id}`    | ✓             | Replace a screening (admin)              |
+| `PATCH`  | `/api/screenings/{id}`    | ✓             | Partially update a screening (admin)     |
+| `DELETE` | `/api/screenings/{id}`    | ✓             | Delete a screening (admin)               |
+| `GET`    | `/api/bookings`           | ✓             | List the authenticated user's bookings   |
+| `POST`   | `/api/bookings`           | ✓             | Create a booking                         |
+| `GET`    | `/api/bookings/{booking}` | ✓             | Get a single booking                     |
+| `PUT`    | `/api/bookings/{booking}` | ✓             | Replace a booking                        |
+| `DELETE` | `/api/bookings/{booking}` | ✓             | Cancel a booking                         |
+
+## Explore by resource
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/api/authentication">
+    Register, log in, log out, and retrieve the current user.
+  </Card>
+  <Card title="Movies" icon="film" href="/api/movies">
+    Browse and manage the film catalogue.
+  </Card>
+  <Card title="Screenings" icon="calendar" href="/api/screenings">
+    List and manage screening schedules and seat availability.
+  </Card>
+  <Card title="Bookings" icon="ticket" href="/api/bookings">
+    Create and manage ticket bookings for authenticated users.
+  </Card>
+</CardGroup>

@@ -1,0 +1,46 @@
+---
+title: "View film screenings and check seat availability"
+description: "See all scheduled showtimes for a movie, understand how screenings are organised by week and day, and check which seats are already taken before you book."
+---
+
+Once you select a movie from the catalog, Tikera shows you every screening scheduled for that film during the selected week. Screenings are displayed inside the booking panel and are grouped by day so you can quickly find a time that suits you.
+
+## How screenings are organised
+
+Tikera schedules screenings using two calendar fields:
+
+- **`week_number`** — the ISO week number of the year (e.g. week 20). This is the same value used by the Week Selector at the top of the Movies page.
+- **`week_day`** — the ISO weekday number, where 1 is Monday and 7 is Sunday.
+
+The Day Selector at the top of the Movies page filters the screening list to the chosen weekday. If no day is selected, all screenings for the week are visible.
+
+## What each screening shows
+
+Each screening entry displays the information you need to decide whether it fits your plans:
+
+| Field | Description |
+|---|---|
+| `date` | The calendar date of the screening |
+| `start_time` | The time the film begins (morning, afternoon, or evening slots) |
+| Room dimensions | The number of rows and seats per row in the assigned screening room |
+| Available seats | How many seats remain unbooked out of the room's total capacity |
+
+Tikera has two screening rooms: the **Grand Hall** (10 rows × 10 seats, 100 total) and the **Small Theater** (7 rows × 8 seats, 56 total). The room assigned to each screening determines how many seats are available and the layout of the seat map.
+
+## Seat availability and the seat map
+
+<Info>
+  Seat availability is calculated in real time from existing confirmed bookings. When you open a screening, Tikera loads all bookings for that slot and marks every reserved seat on the interactive seat map. A seat shown as reserved is already taken and cannot be selected. Only free seats can be added to your order.
+</Info>
+
+The seat map renders the full grid of rows and columns for the screening's room. Each seat has one of three visual states:
+
+- **Free** — available to select
+- **Selected** — chosen by you in the current session
+- **Reserved** — already booked by another customer
+
+The seat map updates as you add or remove tickets, ensuring the number of seats you select always matches the number of tickets in your order.
+
+## Selecting a screening
+
+After clicking a movie card, the booking panel on the right side of the page displays the available screenings for that film. Click the screening time you want to proceed to seat and ticket selection. Only one screening can be active at a time; choosing a different time resets any seats or tickets you have already picked.

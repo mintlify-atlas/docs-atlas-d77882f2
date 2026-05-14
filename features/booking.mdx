@@ -1,0 +1,67 @@
+---
+title: "How to select seats and book cinema tickets"
+description: "Walk through Tikera's booking flow — choose a screening, select seats on the interactive map, pick ticket types, and confirm your reservation."
+---
+
+Tikera's booking flow lives entirely inside the booking panel on the right side of the Movies page. You move from film selection to confirmed reservation without navigating away from the catalog. The panel guides you through each decision in sequence: movie, week and day, screening time, seats, ticket types, and final confirmation.
+
+<Note>
+  You must be signed in to book tickets. If you select a movie while logged out, the booking panel shows a prompt to log in. Booking is also unavailable for admin accounts — admins are directed to the Admin page instead.
+</Note>
+
+## Booking steps
+
+<Steps>
+  <Step title="Choose a movie from the catalog">
+    On the Movies page, browse the card grid and click the film you want to watch. The booking panel on the right activates and shows the movie's details.
+  </Step>
+  <Step title="Select a week and day">
+    Use the **Week Selector** to navigate to the week your screening falls in, then use the **Day Selector** to narrow the view to a specific day. The screening list updates immediately to match your selection.
+  </Step>
+  <Step title="Pick a screening time">
+    The booking panel lists all available screenings for your chosen movie and day. Each entry shows the start time and the screening room. Click the time you want — this loads the seat map and ticket selector for that specific slot.
+  </Step>
+  <Step title="Select your seats on the interactive seat map">
+    The seat map renders the full room layout. Free seats are available to click; reserved seats (already booked by others) are shown in a distinct visual state and cannot be selected. Click a free seat to select it; click a selected seat again to deselect it. You can only select as many seats as the total number of tickets in your order.
+  </Step>
+  <Step title="Choose ticket types and quantities">
+    The ticket selector shows three ticket types with fixed prices:
+
+    | Type | Price |
+    |---|---|
+    | Normal | 2,500 HUF |
+    | Student | 2,000 HUF |
+    | Senior | 1,800 HUF |
+
+    Use the plus and minus controls to set the quantity for each type. The total number of tickets determines how many seats you can select on the map — adding a ticket unlocks one more seat, and removing a ticket deselects the last chosen seat.
+  </Step>
+  <Step title="Review the booking summary">
+    Once your seat count matches your ticket count, a **View Summary** button appears. Clicking it opens a summary modal showing:
+
+    - The movie title
+    - The day and start time of the screening
+    - Each ticket type with quantity and line-total (e.g. "2x Normal — 5,000 Ft")
+    - The list of selected seats by row and column number
+    - The overall total price
+  </Step>
+  <Step title="Confirm your booking">
+    Inside the summary modal, click **Confirm Booking**. Tikera submits your reservation to the server. On success, a confirmation notification appears and you are redirected to the **My Bookings** page where the new booking is listed immediately.
+  </Step>
+</Steps>
+
+## Viewing and managing your bookings
+
+The **My Bookings** page lists every booking associated with your account, paginated at six bookings per page. Each entry shows the movie, screening details, seats, ticket breakdown, total price, and current status.
+
+Bookings have two possible statuses:
+
+- **Confirmed** — the reservation is active and your seats are held.
+- **Cancelled** — the booking was cancelled and the seats have been released.
+
+### Cancelling a booking
+
+<Note>
+  Only bookings for future screenings can be cancelled. If the screening has already taken place, the cancel option is not available for that booking.
+</Note>
+
+To cancel a booking, open the My Bookings page and locate the reservation you want to remove. Use the cancel action on the booking entry. The status updates to cancelled and the seats are freed immediately. The Bookings page refreshes automatically to reflect the change.

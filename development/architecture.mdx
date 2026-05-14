@@ -1,0 +1,74 @@
+---
+title: "Tikera architecture: React SPA and Laravel API"
+description: "Overview of Tikera's full-stack architecture: a React SPA frontend communicating with a Laravel REST API backed by an SQLite database."
+---
+
+Tikera is split into two independently runnable processes that communicate over HTTP. The frontend is a React single-page application bundled by Vite; it talks to a Laravel API server that reads and writes to a local SQLite database. All authentication is handled through Laravel Sanctum bearer tokens, which the frontend stores in `localStorage` and attaches to every protected request.
+
+## Layer overview
+
+| Layer | Technology | Role |
+|-------|-----------|------|
+| Frontend | React 19, Redux Toolkit, Tailwind CSS + DaisyUI | SPA served from Vite dev server or static host |
+| Backend | Laravel, Laravel Sanctum | RESTful JSON API; handles auth, validation, business logic |
+| Database | SQLite | Single-file relational store managed through Laravel migrations |
+
+## Client routes
+
+The React application uses `react-router-dom` v7 and defines five top-level routes in `App.jsx`:
+
+| Path | Component | Access |
+|------|-----------|--------|
+| `/` | `MoviesPage` | Public |
+| `/login` | `LoginPage` | Public |
+| `/register` | `RegisterPage` | Public |
+| `/bookings` | `BookingsPage` | Authenticated |
+| `/adminpage` | `AdminPage` | Admin only |
+
+## API base URL
+
+The axios instance reads its base URL from the `VITE_API_URL` environment variable, which is set in the client's `.env` file before running the Vite dev server:
+
+```bash
+# client/.env
+VITE_API_URL=http://localhost:8000/api
+```
+
+In `api.js` this becomes:
+
+```javascript
+const BASE_URL = import.meta.env.VITE_API_URL;
+
+const api = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+```
+
+Vite path aliases (configured in `vite.config.js`) keep imports short across the frontend:
+
+```javascript
+resolve: {
+  alias: {
+    "@": "/src",
+    "@components": "/src/components",
+    "@store": "/src/store",
+    "@services": "/src/services",
+    "@utils": "/src/utils",
+    "@hooks": "/src/hooks",
+  },
+},
+```
+
+## Explore further
+
+<CardGroup cols={2}>
+  <Card title="Frontend architecture" href="/development/frontend">
+    React component structure, Redux slices, and the service layer
+  </Card>
+  <Card title="Backend API and models" href="/development/backend">
+    Laravel controllers, Eloquent models, and database schema
+  </Card>
+</CardGroup>
